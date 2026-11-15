@@ -1,0 +1,22 @@
+{
+  "name": "chess-rooms",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "node test/scratch.js",
+    "test:suites": "node test/run.js && node test/offers.js && node test/plus_chess.js && node test/plus_analysis.js && node test/plus_analysis_load.js && node test/plus_stats.js && node test/maia.js && node test/moderation.js && node test/pacing.js && node test/r1.js && node test/plus_wallet.js && node test/roomcode.js && node test/coach.js",
+    "start": "node server.js",
+    "bot": "node test/run.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "express": "^5.2.1",
+    "onnxruntime-node": "^1.30.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
+  }
+}

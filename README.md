@@ -1,0 +1,14 @@
+# Chess Rooms (self-hosted)
+
+The room server for GameNest's **Chess**. Two players (or one and a bot) share a 6-letter room code. The rules come from [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause): castling, en passant, promotion, check, checkmate, stalemate, threefold repetition, the fifty-move rule and insufficient material. White alternates at each rematch, and the room keeps a win tally.
+
+It speaks the GameNest room protocol (`create`, `join`, `addBot`, `removeBot`, `start`, `rematch`, `leave`, `takeSeat`, `chat`, `voice`, `pushToken` and `presence`), plus `move {uci}` (or `{from, to, promotion}`) and `resign`. Each `state` carries the board (rank 1 first), the FEN, the legal moves for the side to move, the last move (with capture, castle, en passant and promotion), check, the result and its reason, and both sides' captured pieces.
+
+The bot uses negamax with alpha-beta pruning over material and piece-square tables, and drives the king to the edge in endgames. It deepens one ply at a time to depth 3 within an 0.8-second budget, so it never holds up the server.
+
+Easy, Normal and Hard play like people of about 1000, 1400 and 1900: `maia.js` runs [Maia-2](https://github.com/CSSLab/maia2) (MIT; Maia-2 "rapid", the move a human of that rating is likeliest to make, from millions of Lichess games) in a worker thread through `onnxruntime-node`, a few milliseconds a move. The model (85 MB) is not in git: `tools/maia_model.sh` makes `engine/maia2_rapid.onnx` (or set `MAIA_MODEL`). Without it these bots play the old way. Expert and Master (GameNest Plus) stay Stockfish.
+
+Pacing (round 1, 2026-11-01): a bot's ply takes 0.8-2.5 s by the position (a forced move, a recapture or an opening move is quick, a crowded middlegame is not) and is on the board within 2.8 s (`BOT_HARD_MS`) of its turn whatever its engine does: the engine is asked at once and thinks while the bot "thinks", a watchdog plays the old way's short search (`botCol`) when no answer is there 2.5 s in, a rejected, thrown or illegal answer does the same, and a Maia-2 or Stockfish worker that answers nothing to two moves running is replaced. A bot's request jumps ahead of a game review's in the Maia worker (the review gives way between plies). A late rejection no longer stops the server (`unhandledRejection` is logged). `node test/soak.js <url> easy,normal,hard,expert,master 200` plays that many bot plies a level over a socket and reports p50, p95 and max; `test/pacing.js` (in `npm test`) shows a hung, rejecting, throwing, illegal and late engine each still moving the bot in under 3 s.
+
+- `npm test`: the rules, the bot, and whole games over a socket.
+- Environment: `PORT`, `BASE_PATH`, `TURN_MS` (60 s), `AFK_MS`, `BOT_MS`, `BOT_DEPTH` (3), `BOT_BUDGET_MS` (800), `MAIA_MODEL` (engine/maia2_rapid.onnx).
