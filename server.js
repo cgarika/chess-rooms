@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const express = require("express");
 const { Server } = require("socket.io");
 const Reactions = require("./reactions");   // the cartoon stickers (2026-10-15)
+const Voice = require("./voice");   // voice chat in private rooms, EOS (2026-11-18; the file every server shares)
+const Played = require("./friendsplayed");   // Friends: "last played with" when a game ends (2026-11-19; the file every server shares)
 const Quick = require("./quickmatch");   // quick play and ranked (2026-10-24)
 const Plus = require("./plus");   // GameNest Plus: the room's flag and each player's look (2026-10-16)
 
@@ -550,6 +552,8 @@ function stateFor(room) {
     serverNow: Date.now(),
     ...Reactions.view(room),   // 2026-10-15: reactionsOn and the last reactions
     ...Quick.view(room),   // quick play and ranked (2026-10-24)
+    ...Voice.view(room),   // voice chat (2026-11-18): gnVoice { on, peers }
+    ...Played.view(room, "chess"),   // Friends (2026-11-19): reports a finished game once; adds no field
   };
 }
 function bump(room) { room.v = (room.v || 0) + 1; room.touched = Date.now(); sendState(room.code); }
@@ -722,6 +726,7 @@ io.on("connection", (socket) => {
   socket.data.playerId = null;
   socket.data.code = null;
   const currentRoom = () => rooms.get(socket.data.code);
+  Voice.wire({ on: on, room: currentRoom, me: () => socket.data.playerId, bump: bump, emit: (ev, d) => socket.emit(ev, d) });   // voice chat in private rooms (2026-11-18)
   Reactions.wire({ on, room: currentRoom, me: () => socket.data.playerId, isHost: (r) => r.host === socket.data.playerId, bump });
   /* GN-20: a socket sits in one room at a time. Seating it in another first takes it out of the one it was in, as a
      disconnect would, so it never hears two rooms' states. socket.data.as is the player it sits as. */
